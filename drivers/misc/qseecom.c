@@ -4127,6 +4127,8 @@ static int qseecom_release(struct inode *inode, struct file *file)
 			break;
 		case QSEECOM_UNAVAILABLE_CLIENT_APP:
 			break;
+		case QSEECOM_UNAVAILABLE_CLIENT_APP:
+			break;
 		default:
 			pr_err("Unsupported clnt_handle_type %d",
 				data->type);
