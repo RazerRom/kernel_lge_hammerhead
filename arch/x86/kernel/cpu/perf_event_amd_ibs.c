@@ -257,37 +257,9 @@ static void clear_APIC_ibs(void *dummy)
 		setup_APIC_eilvt(offset, 0, APIC_EILVT_MSG_FIX, 1);
 }
 
-#ifdef CONFIG_PM
 
-static int perf_ibs_suspend(void)
-{
-	clear_APIC_ibs(NULL);
-	return 0;
-}
+static int
 
-static void perf_ibs_resume(void)
-{
-	ibs_eilvt_setup();
-	setup_APIC_ibs(NULL);
-}
-
-static struct syscore_ops perf_ibs_syscore_ops = {
-	.resume		= perf_ibs_resume,
-	.suspend	= perf_ibs_suspend,
-};
-
-static void perf_ibs_pm_init(void)
-{
-	register_syscore_ops(&perf_ibs_syscore_ops);
-}
-
-#else
-
-static inline void perf_ibs_pm_init(void) { }
-
-#endif
-
-static int __cpuinit
 perf_ibs_cpu_notifier(struct notifier_block *self, unsigned long action, void *hcpu)
 {
 	switch (action & ~CPU_TASKS_FROZEN) {
