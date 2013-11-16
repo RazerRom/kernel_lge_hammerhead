@@ -24,6 +24,10 @@
 
 #include <asm/system_info.h>
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+#include <linux/input/sweep2wake.h>
+#endif
+
 #include "mdss_dsi.h"
 
 #ifdef CONFIG_POWERSUSPEND
@@ -331,7 +335,17 @@ static int mdss_dsi_panel_off(struct mdss_panel_data *pdata)
 	if (!gpio_get_value(ctrl->disp_en_gpio))
 		return 0;
 
+#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
+	if (s2w_switch) {
+		ctrl->off_cmds.cmds[1].payload[0] = 0x11;
+	} else {
+		ctrl->off_cmds.cmds[1].payload[0] = 0x10;
+	}
+	pr_info("[sweep2wake] payload = %x \n", ctrl->off_cmds.cmds[1].payload[0]);
+#endif
+
 	mutex_lock(&panel_cmd_mutex);
+
 	if (ctrl->off_cmds.cmd_cnt)
 		mdss_dsi_panel_cmds_send(ctrl, &ctrl->off_cmds);
 	mutex_unlock(&panel_cmd_mutex);
