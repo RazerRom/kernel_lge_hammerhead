@@ -28,6 +28,11 @@
 #define DT_CMD_HDR 6
 #define GAMMA_COMPAT 11
 
+//Basic color preset
+int color_preset = 0;
+module_param(color_preset, int, 0755);
+
+
 struct mdss_dsi_ctrl_pdata *local_ctrl;
 static struct work_struct send_cmds_work;
 static struct kobject *module_kobj;
@@ -291,6 +296,12 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	mipi  = &pdata->panel_info.mipi;
 
 	pr_debug("%s: ctrl=%p ndx=%d\n", __func__, ctrl, ctrl->ndx);
+
+//Basic color preset
+	if (color_preset == 1)
+		ctrl->on_cmds.cmds[1].payload[0] = 0x77;
+	else
+		ctrl->on_cmds.cmds[1].payload[0] = 0xFF;
 
 	mutex_lock(&panel_cmd_mutex);
 	if (local_ctrl->on_cmds.cmd_cnt)
