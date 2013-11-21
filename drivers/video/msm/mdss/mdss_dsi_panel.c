@@ -37,6 +37,10 @@
 #include <linux/qpnp/power-on.h>
 #endif
 
+#ifdef CONFIG_PWRKEY_SUSPEND
+#include <linux/qpnp/power-on.h>
+#endif
+
 #include "mdss_dsi.h"
 
 #ifdef CONFIG_POWERSUSPEND
