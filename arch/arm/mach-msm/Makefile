@@ -437,3 +437,4 @@ obj-$(CONFIG_WALL_CLK_SYSFS) += wallclk_sysfs.o
 
 obj-$(CONFIG_MSM_CPUFREQ_LIMITER) += cpufreq_limit.o
 obj-$(CONFIG_TURBO_BOOST) += msm_turbo.o
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
