@@ -245,8 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = ccache gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-pointer
-HOSTCXXFLAGS = -O2
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer
+HOSTCXXFLAGS = -O3
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -330,7 +330,7 @@ include $(srctree)/scripts/Kbuild.include
 
 AS		= $(CROSS_COMPILE)as
 LD		= $(CROSS_COMPILE)ld
-CC		= $(CROSS_COMPILE)gcc
+CC		= ccache $(CROSS_COMPILE)gcc
 CPP		= $(CC) -E
 AR		= $(CROSS_COMPILE)ar
 NM		= $(CROSS_COMPILE)nm
@@ -351,12 +351,17 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   =
-AFLAGS_MODULE   =
-LDFLAGS_MODULE  =
-CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
+MODFLAGS	= -DMODULE -fno-pic -marm -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
+CFLAGS_MODULE   = $(MODFLAGS)
+AFLAGS_MODULE   = $(MODFLAGS)
+LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds --strip-debug
+CFLAGS_KERNEL	= -mfpu=neon-vfpv4
+AFLAGS_KERNEL	= $(MODFLAGS)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
+
+LOW_ARM_FLAGS	= -pipe -marm -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-tree-vectorize -fno-schedule-insns2 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-inline-functions -fno-pic
+MODULES		= -fmodulo-sched -fmodulo-sched-allow-regmoves
+KERNEL_MODS	= $(LOW_ARM_FLAGS) $(MODULES)
 
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
@@ -368,11 +373,18 @@ LINUXINCLUDE    := -I$(srctree)/arch/$(hdr-arch)/include \
 
 KBUILD_CPPFLAGS := -D__KERNEL__
 
-KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
+KBUILD_CFLAGS   := -O3 -funswitch-loops \
+		   -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -fno-delete-null-pointer-checks
+		   -Wno-maybe-uninitialized \
+		   -fno-delete-null-pointer-checks \
+		   -fno-schedule-insns2 $(KERNEL_MODS) \
+		   -mfpu=neon-vfpv4 -mtune=cortex-a15 \
+		   -Wno-unused-variable \
+		   -Wno-unused-function
+
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
