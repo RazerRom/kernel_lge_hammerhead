@@ -245,8 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = ccache gcc
 HOSTCXX      = g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer
-HOSTCXXFLAGS = -O3
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer -fgcse-las
+HOSTCXXFLAGS = -O3 -fgcse-las
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -351,17 +351,21 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-MODFLAGS	= -DMODULE -fno-pic -marm -mtune=cortex-a15 -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
+KERNELFLAG		= -O3 -pipe -fno-pic -munaligned-access -fgcse-sm -fgcse-las -fsched-spec-load -fforce-addr -ffast-math \
+				 -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -ftree-vectorize \
+				 -mvectorize-with-neon-quad -funroll-loops \
+            	 -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange \
+            	 -floop-strip-mine -floop-block -ftree-loop-distribution -ftree-parallelize-loops=4 \
+            	 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize \
+            	 -fno-schedule-insns2 -fmodulo-sched -fno-inline-functions
+
+MODFLAGS		= -DMODULE -DNDEBUG $(KERNELFLAG) 
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds --strip-debug
-CFLAGS_KERNEL	= -mfpu=neon-vfpv4
-AFLAGS_KERNEL	= $(MODFLAGS)
+CFLAGS_KERNEL	= $(KERNELFLAG)
+AFLAGS_KERNEL	= $(KERNELFLAG)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
-
-LOW_ARM_FLAGS	= -pipe -marm -mtune=cortex-a15 -mfpu=neon-vfpv4 -fno-tree-vectorize -fno-schedule-insns2 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-inline-functions -fno-pic
-MODULES		= -fmodulo-sched -fmodulo-sched-allow-regmoves
-KERNEL_MODS	= $(LOW_ARM_FLAGS) $(MODULES)
 
 
 # Use LINUXINCLUDE when you must reference the include/ directory.
@@ -378,12 +382,8 @@ KBUILD_CFLAGS   := -O3 -funswitch-loops \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -Wno-maybe-uninitialized \
 		   -fno-delete-null-pointer-checks \
-		   -fno-schedule-insns2 $(KERNEL_MODS) \
-		   -mfpu=neon-vfpv4 -mtune=cortex-a15 \
-		   -Wno-unused-variable \
-		   -Wno-unused-function
+		   $(KERNELFLAG)
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -577,7 +577,7 @@ all: vmlinux
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 else
-KBUILD_CFLAGS	+= -O2
+KBUILD_CFLAGS	+= -O3
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
