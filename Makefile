@@ -351,13 +351,12 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-KERNELFLAG		= -O3 -pipe -fno-pic -munaligned-access -fgcse-sm -fgcse-las -fsched-spec-load -fforce-addr -ffast-math \
-				 -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 -ftree-vectorize \
-				 -mvectorize-with-neon-quad -funroll-loops \
-            	 -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange \
-            	 -floop-strip-mine -floop-block -ftree-loop-distribution -ftree-parallelize-loops=4 \
-            	 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize \
-            	 -fno-schedule-insns2 -fmodulo-sched -fno-inline-functions
+
+KERNELFLAGS	= -O3 -pipe -fno-pic -munaligned-access -fgcse-sm -fgcse-las -fsched-spec-load -fforce-addr -ffast-math \
+             -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine \
+             -floop-block -ftree-loop-distribution -ftree-parallelize-loops=4 \
+             -fsingle-precision-constant -mcpu=cortex-a15 -mtune=cortex-a15 -marm -mfpu=neon-vfpv4 \
+             -ftree-vectorize -mvectorize-with-neon-quad -funroll-loops -fmodulo-sched -fmodulo-sched-allow-regmoves \
 
 MODFLAGS		= -DMODULE -DNDEBUG $(KERNELFLAG) 
 CFLAGS_MODULE   = $(MODFLAGS)
