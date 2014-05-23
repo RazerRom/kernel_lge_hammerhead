@@ -382,6 +382,7 @@ KBUILD_CFLAGS   := -O3 -funswitch-loops \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
 		   -fno-delete-null-pointer-checks \
+		   -Wno-maybe-uninitialized -Wno-array-bounds \
 		   $(KERNELFLAG)
 
 KBUILD_AFLAGS_KERNEL :=
