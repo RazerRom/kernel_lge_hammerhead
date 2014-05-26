@@ -616,7 +616,7 @@ static u64 __sched_period(unsigned long nr_running)
 
 	if (unlikely(nr_running > nr_latency)) {
 		/* let's give real granularity here */
-		period = 5000000ULL;
+		period = 50000000ULL;
 		period *= nr_running;
 	}
 
