@@ -37,7 +37,3 @@
 #define D_BITS		14
 #define D_MASK		((1u << D_BITS) - 1)
 #define D_HIGH		((D_MASK >> 1) + 1)
-
-#define DX2(p, s1, s2)	(((((size_t)((p)[2]) << (s2)) ^ (p)[1]) \
-							<< (s1)) ^ (p)[0])
-#define DX3(p, s1, s2, s3)	((DX2((p)+1, s2, s3) << (s1)) ^ (p)[0])
