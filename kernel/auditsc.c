@@ -926,7 +926,6 @@ static int audit_filter_inode_name(struct task_struct *tsk,
 	int h = audit_hash_ino((u32)n->ino);
 	struct list_head *list = &audit_inode_hash[h];
 	struct audit_entry *e;
-
 	enum audit_state state = 0;
 
 
