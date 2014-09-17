@@ -100,17 +100,12 @@ choice
 	  when building a kernel.  Decompression speed is relevant at
 	  each boot.
 
-	  If you have any problems with bzip2 or LZMA compressed
-	  initramfs, mail me (Alain Knaff) <alain@knaff.lu>.
+config RD_LZ4
+	bool "Support initial ramdisks compressed using LZ4" if EXPERT
+	default !EXPERT
+	depends on BLK_DEV_INITRD
+	select DECOMPRESS_LZ4
 
-	  High compression options are mostly useful for users who are
-	  low on RAM, since it reduces the memory consumption during
-	  boot.
-
-	  If in doubt, select 'gzip'
-
-config INITRAMFS_COMPRESSION_NONE
-	bool "None"
 	help
 	  Do not compress the built-in initramfs at all. This may
 	  sound wasteful in space, but, you should be aware that the
