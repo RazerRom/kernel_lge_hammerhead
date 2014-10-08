@@ -25,14 +25,11 @@ struct ceph_connection_operations {
 	void (*dispatch) (struct ceph_connection *con, struct ceph_msg *m);
 
 	/* authorize an outgoing connection */
-	int (*get_authorizer) (struct ceph_connection *con,
-			       void **buf, int *len, int *proto,
-			       void **reply_buf, int *reply_len, int force_new);
+	struct ceph_auth_handshake *(*get_authorizer) (
+				struct ceph_connection *con,
+			       int *proto, int force_new);
 	int (*verify_authorizer_reply) (struct ceph_connection *con, int len);
 	int (*invalidate_authorizer)(struct ceph_connection *con);
-
-	/* protocol version mismatch */
-	void (*bad_proto) (struct ceph_connection *con);
 
 	/* there was some error on the socket (disconnect, whatever) */
 	void (*fault) (struct ceph_connection *con);
@@ -119,7 +116,6 @@ struct ceph_msg_pos {
 #define CLOSED		10 /* we've closed the connection */
 #define SOCK_CLOSED	11 /* socket state changed to closed */
 #define OPENING         13 /* open connection w/ (possibly new) peer */
-#define DEAD            14 /* dead, about to kfree */
 #define BACKOFF         15
 
 /*
@@ -163,16 +159,8 @@ struct ceph_connection {
 
 	/* connection negotiation temps */
 	char in_banner[CEPH_BANNER_MAX_LEN];
-	union {
-		struct {  /* outgoing connection */
-			struct ceph_msg_connect out_connect;
-			struct ceph_msg_connect_reply in_reply;
-		};
-		struct {  /* incoming */
-			struct ceph_msg_connect in_connect;
-			struct ceph_msg_connect_reply out_reply;
-		};
-	};
+	struct ceph_msg_connect out_connect;
+	struct ceph_msg_connect_reply in_reply;
 	struct ceph_entity_addr actual_peer_addr;
 
 	/* message out temps */
@@ -231,8 +219,6 @@ extern void ceph_con_revoke(struct ceph_connection *con, struct ceph_msg *msg);
 extern void ceph_con_revoke_message(struct ceph_connection *con,
 				  struct ceph_msg *msg);
 extern void ceph_con_keepalive(struct ceph_connection *con);
-extern struct ceph_connection *ceph_con_get(struct ceph_connection *con);
-extern void ceph_con_put(struct ceph_connection *con);
 
 extern struct ceph_msg *ceph_msg_new(int type, int front_len, gfp_t flags,
 				     bool can_fail);

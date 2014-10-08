@@ -334,10 +334,10 @@ void ceph_put_mds_session(struct ceph_mds_session *s)
 	dout("mdsc put_session %p %d -> %d\n", s,
 	     atomic_read(&s->s_ref), atomic_read(&s->s_ref)-1);
 	if (atomic_dec_and_test(&s->s_ref)) {
-		if (s->s_authorizer)
+		if (s->s_auth.authorizer)
 		     s->s_mdsc->fsc->client->monc.auth->ops->destroy_authorizer(
 			     s->s_mdsc->fsc->client->monc.auth,
-			     s->s_authorizer);
+			     s->s_auth.authorizer);
 		kfree(s);
 	}
 }
@@ -2636,7 +2636,8 @@ static void check_new_map(struct ceph_mds_client *mdsc,
 		     ceph_mdsmap_is_laggy(newmap, i) ? " (laggy)" : "",
 		     session_state_name(s->s_state));
 
-		if (memcmp(ceph_mdsmap_get_addr(oldmap, i),
+		if (i >= newmap->m_max_mds ||
+		    memcmp(ceph_mdsmap_get_addr(oldmap, i),
 			   ceph_mdsmap_get_addr(newmap, i),
 			   sizeof(struct ceph_entity_addr))) {
 			if (s->s_state == CEPH_MDS_SESSION_OPENING) {
@@ -3395,39 +3396,33 @@ out:
 /*
  * authentication
  */
-static int get_authorizer(struct ceph_connection *con,
-			  void **buf, int *len, int *proto,
-			  void **reply_buf, int *reply_len, int force_new)
+
+/*
+ * Note: returned pointer is the address of a structure that's
+ * managed separately.  Caller must *not* attempt to free it.
+ */
+static struct ceph_auth_handshake *get_authorizer(struct ceph_connection *con,
+					int *proto, int force_new)
 {
 	struct ceph_mds_session *s = con->private;
 	struct ceph_mds_client *mdsc = s->s_mdsc;
 	struct ceph_auth_client *ac = mdsc->fsc->client->monc.auth;
-	int ret = 0;
+	struct ceph_auth_handshake *auth = &s->s_auth;
 
-	if (force_new && s->s_authorizer) {
-		ac->ops->destroy_authorizer(ac, s->s_authorizer);
-		s->s_authorizer = NULL;
+	if (force_new && auth->authorizer) {
+		if (ac->ops && ac->ops->destroy_authorizer)
+			ac->ops->destroy_authorizer(ac, auth->authorizer);
+		auth->authorizer = NULL;
 	}
-	if (s->s_authorizer == NULL) {
-		if (ac->ops->create_authorizer) {
-			ret = ac->ops->create_authorizer(
-				ac, CEPH_ENTITY_TYPE_MDS,
-				&s->s_authorizer,
-				&s->s_authorizer_buf,
-				&s->s_authorizer_buf_len,
-				&s->s_authorizer_reply_buf,
-				&s->s_authorizer_reply_buf_len);
-			if (ret)
-				return ret;
-		}
+	if (!auth->authorizer && ac->ops && ac->ops->create_authorizer) {
+		int ret = ac->ops->create_authorizer(ac, CEPH_ENTITY_TYPE_MDS,
+							auth);
+		if (ret)
+			return ERR_PTR(ret);
 	}
-
 	*proto = ac->protocol;
-	*buf = s->s_authorizer_buf;
-	*len = s->s_authorizer_buf_len;
-	*reply_buf = s->s_authorizer_reply_buf;
-	*reply_len = s->s_authorizer_reply_buf_len;
-	return 0;
+
+	return auth;
 }
 
 
@@ -3437,7 +3432,7 @@ static int verify_authorizer_reply(struct ceph_connection *con, int len)
 	struct ceph_mds_client *mdsc = s->s_mdsc;
 	struct ceph_auth_client *ac = mdsc->fsc->client->monc.auth;
 
-	return ac->ops->verify_authorizer_reply(ac, s->s_authorizer, len);
+	return ac->ops->verify_authorizer_reply(ac, s->s_auth.authorizer, len);
 }
 
 static int invalidate_authorizer(struct ceph_connection *con)
