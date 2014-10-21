@@ -1,10 +1,6 @@
 /*
  *  drivers/cpufreq/cpufreq_dancedance.c
  *
- *  Copyright (C)  2001 Russell King
- *  Copyright (C)  2009 Alexander Clouter <alex@digriz.org.uk>
- *  Copyright (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
- *  Copyright (C)  2011 HXMR <ymostafa30@gmail.com>
  *  Copyright (C)  2012 Shaun Nuzzo <jrracinfan@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -639,9 +635,9 @@ MODULE_AUTHOR("Shaun Nuzzo <jrracinfan@gmail.com>");
 MODULE_DESCRIPTION("'cpufreq_dancedance' - A dynamic cpufreq governor for "
 		"Low Latency Frequency Transition capable processors "
 		"optimised for use in a battery environment"
-		"Modified code based off conservative and interactivex"
-                "with a faster deep sleep rate");
-MODULE_LICENSE("GPLv2");
+		"Modified code based off conservative with a faster"
+		"deep sleep rate");
+MODULE_LICENSE("GPL");
 
 #ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_DANCEDANCE
 fs_initcall(cpufreq_gov_dbs_init);
