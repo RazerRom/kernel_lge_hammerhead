@@ -48,7 +48,6 @@ struct cpu_stats {
 	struct notifier_block notif;
 	u64 timestamp;
 	uint32_t freq;
-	uint32_t saved_freq;
 	bool screen_cap_lock;
 	bool suspend;
 } stats = {
@@ -265,13 +264,7 @@ static void screen_off_cap(bool nerf)
 {
 	int cpu;
 
-	stats.freq = nerf ? MAX_FREQ_CAP : stats.saved_freq;
-
-	/*
-	 * This can be 0 on bootup if policy->max is not yet set
-	 */
-	if (!stats.freq)
-		stats.freq = LONG_MAX;
+	stats.freq = nerf ? MAX_FREQ_CAP : LONG_MAX;
 
 	stats.screen_cap_lock = true;
 
@@ -283,9 +276,7 @@ static void screen_off_cap(bool nerf)
 
 static void mako_hotplug_suspend(struct work_struct *work)
 {
-	struct cpufreq_policy *policy = NULL;
 	int cpu;
-	int ret;
 
 	stats.counter = 0;
 
@@ -296,17 +287,6 @@ static void mako_hotplug_suspend(struct work_struct *work)
 		cpu_down(cpu);
 	}
 
-	/*
-	 * Save the current max freq before capping it to 1GHz
-	 * so that we can restore it after screen on.
-	 * Test for thermal throttle cases before merging on
-	 * production.
-	 */
-	ret = cpufreq_get_policy(policy, 0);
-	if (ret)
-		stats.saved_freq = LONG_MAX;
-	else
-		stats.saved_freq = policy->max;
 
 	stats.suspend = true;
 
