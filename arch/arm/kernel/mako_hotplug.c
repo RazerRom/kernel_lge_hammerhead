@@ -261,9 +261,11 @@ static struct notifier_block cpufreq_notifier = {
 	.notifier_call = cpufreq_callback,
 };
 
-static void screen_off_max_freq(int cpu, bool lower_max_freq)
+static void screen_off_cap(bool nerf)
 {
-	stats.freq = lower_max_freq ? MAX_FREQ_CAP : stats.saved_freq;
+	int cpu;
+
+	stats.freq = nerf ? MAX_FREQ_CAP : stats.saved_freq;
 
 	/*
 	 * This can be 0 on bootup if policy->max is not yet set
@@ -271,42 +273,44 @@ static void screen_off_max_freq(int cpu, bool lower_max_freq)
 	if (!stats.freq)
 		stats.freq = LONG_MAX;
 
-	/*
-	 * Simple lock not for concurrent accesses, but to prevent
-	 * the notifier to trigger a policy limits verify unless we
-	 * requested it
-	 */
 	stats.screen_cap_lock = true;
-	cpufreq_update_policy(cpu);
+
+	for_each_online_cpu(cpu)
+		cpufreq_update_policy(cpu);
+
 	stats.screen_cap_lock = false;
 }
 
 static void mako_hotplug_suspend(struct work_struct *work)
 {
-	struct cpufreq_policy *policy = cpufreq_cpu_get(0);
+	struct cpufreq_policy *policy = NULL;
 	int cpu;
+	int ret;
 
-	/*
-	 * Save the current max freq before capping it to 1GHz
-	 * so that we can restore it after screen on.
-	 * TODO: More tests for thermal throttle cases
-	 */
-	if (!policy)
-		stats.saved_freq = LONG_MAX;
-	else
-		stats.saved_freq = policy->max;
+	stats.counter = 0;
 
 	for_each_online_cpu(cpu) {
-		if (cpu < 2) {
-			screen_off_max_freq(cpu, true);
+		if (cpu < 2)
 			continue;
-		}
 
 		cpu_down(cpu);
 	}
 
-	stats.counter = 0;
+	/*
+	 * Save the current max freq before capping it to 1GHz
+	 * so that we can restore it after screen on.
+	 * Test for thermal throttle cases before merging on
+	 * production.
+	 */
+	ret = cpufreq_get_policy(policy, 0);
+	if (ret)
+		stats.saved_freq = LONG_MAX;
+	else
+		stats.saved_freq = policy->max;
+
 	stats.suspend = true;
+
+	screen_off_cap(true);
 
 	pr_info("%s: suspend\n", MAKO_HOTPLUG);
 }
@@ -315,11 +319,11 @@ static void __ref mako_hotplug_resume(struct work_struct *work)
 {
 	int cpu;
 
+	screen_off_cap(false);
+
 	for_each_possible_cpu(cpu) {
-		if (cpu_online(cpu)) {
-			screen_off_max_freq(cpu, false);
+		if (!cpu || cpu_online(cpu))
 			continue;
-		}
 
 		cpu_up(cpu);
 	}
