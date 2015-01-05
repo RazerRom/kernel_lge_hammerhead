@@ -1895,8 +1895,7 @@ static int synaptics_ts_probe(
 	ret = request_threaded_irq(client->irq, NULL, touch_irq_handler,
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-
-			IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client->name, ts);
+			IRQF_TRIGGER_FALLING | IRQF_ONESHOT | IRQF_NO_SUSPEND | IRQF_EARLY_RESUME, client->name, ts);
 
 #else
 			IRQF_TRIGGER_FALLING | IRQF_ONESHOT, client->name, ts);
