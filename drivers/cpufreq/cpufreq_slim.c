@@ -1059,6 +1059,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 					policy->cpuinfo.max_freq;
 	}
 
+	cpufreq_notify_utilization(policy, cur_load);
+
 	for_each_online_cpu(j) {
 		struct cpu_dbs_info_s *j_dbs_info;
 		j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
