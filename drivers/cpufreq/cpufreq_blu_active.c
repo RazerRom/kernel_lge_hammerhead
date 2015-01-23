@@ -266,7 +266,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 		if (pcpu->policy->cur < hispeed_freq) {
 			new_freq = hispeed_freq;
 		} else {
-			new_freq = pcpu->policy->max * cpu_load / 100;
+			new_freq = pcpu->policy->min + cpu_load * (pcpu->policy->max - pcpu->policy->min) / 100;
 
 			if (new_freq < hispeed_freq)
 				new_freq = hispeed_freq;
@@ -274,7 +274,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	} else if (cpu_load <= 5) {
 		new_freq = pcpu->policy->cpuinfo.min_freq;
 	} else {
-		new_freq = pcpu->policy->max * cpu_load / 100;
+		new_freq = pcpu->policy->min + cpu_load * (pcpu->policy->max - pcpu->policy->min) / 100;
 	}
 	
 	if (boosted && new_freq < input_boost_freq)
@@ -291,7 +291,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->local_hvtime = now;
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_H,
+					   new_freq, CPUFREQ_RELATION_C,
 					   &index)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
