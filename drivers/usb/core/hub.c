@@ -2339,6 +2339,9 @@ static int hub_port_wait_reset(struct usb_hub *hub, int port1,
 				return -ENOTCONN;
 
 			if ((portstatus & USB_PORT_STAT_ENABLE)) {
+				if (!udev)
+					return 0;
+
 				if (hub_is_wusb(hub))
 					udev->speed = USB_SPEED_WIRELESS;
 				else if (hub_is_superspeed(hub->hdev))
@@ -2382,13 +2385,15 @@ static void hub_port_finish_reset(struct usb_hub *hub, int port1,
 			struct usb_hcd *hcd;
 			/* TRSTRCY = 10 ms; plus some extra */
 			msleep(10 + 40);
-			update_devnum(udev, 0);
-			hcd = bus_to_hcd(udev->bus);
-			/* The xHC may think the device is already reset,
-			 * so ignore the status.
-			 */
-			if (hcd->driver->reset_device)
-				hcd->driver->reset_device(hcd, udev);
+			if (udev) {
+				update_devnum(udev, 0);
+				hcd = bus_to_hcd(udev->bus);
+				/* The xHC may think the device is already
+				 * reset, so ignore the status.
+				 */
+				if (hcd->driver->reset_device)
+					hcd->driver->reset_device(hcd, udev);
+			}
 		}
 		/* FALL THROUGH */
 	case -ENOTCONN:
@@ -2402,7 +2407,7 @@ static void hub_port_finish_reset(struct usb_hub *hub, int port1,
 			clear_port_feature(hub->hdev, port1,
 					USB_PORT_FEAT_C_PORT_LINK_STATE);
 		}
-		if (!warm)
+		if (!warm && udev)
 			usb_set_device_state(udev, *status
 					? USB_STATE_NOTATTACHED
 					: USB_STATE_DEFAULT);
@@ -2416,17 +2421,16 @@ static int hub_port_reset(struct usb_hub *hub, int port1,
 {
 	int i, status;
 
-	if (!warm) {
-		/* Block EHCI CF initialization during the port reset.
-		 * Some companion controllers don't like it when they mix.
-		 */
-		down_read(&ehci_cf_port_reset_rwsem);
-	} else {
-		if (!hub_is_superspeed(hub->hdev)) {
+	if (!hub_is_superspeed(hub->hdev)) {
+		if (warm) {
 			dev_err(hub->intfdev, "only USB3 hub support "
 						"warm reset\n");
 			return -EINVAL;
 		}
+		/* Block EHCI CF initialization during the port reset.
+		 * Some companion controllers don't like it when they mix.
+		 */
+		down_read(&ehci_cf_port_reset_rwsem);
 	}
 
 	/* Reset the port */
@@ -2464,7 +2468,7 @@ static int hub_port_reset(struct usb_hub *hub, int port1,
 		port1);
 
 done:
-	if (!warm)
+	if (!hub_is_superspeed(hub->hdev))
 		up_read(&ehci_cf_port_reset_rwsem);
 
 	return status;
