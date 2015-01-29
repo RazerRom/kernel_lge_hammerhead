@@ -428,6 +428,12 @@ struct freq_attr msm_cpufreq_attr_ex_max_freq = {
 
 /** maxscreen off sysfs interface **/
 
+
+static ssize_t show_max_screen_off(struct cpufreq_policy *policy, char *buf)
+{
+	return sprintf(buf, "%u\n", maxscroff);
+}
+
 static ssize_t show_max_screen_off_khz(struct cpufreq_policy *policy, char *buf)
 {
 	return sprintf(buf, "%u\n", maxscroff_freq);
