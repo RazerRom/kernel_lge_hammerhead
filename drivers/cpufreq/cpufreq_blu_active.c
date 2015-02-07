@@ -2,7 +2,7 @@
  * drivers/cpufreq/cpufreq_blu_active.c
  *
  * Copyright (C) 2010 Google, Inc.
- * Copyright (C) 2014 engstk (changes for blu_active)
+ * Copyright (C) 2015 engstk (changes for blu_active)
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -291,7 +291,7 @@ static void cpufreq_interactive_timer(unsigned long data)
 	pcpu->local_hvtime = now;
 
 	if (cpufreq_frequency_table_target(pcpu->policy, pcpu->freq_table,
-					   new_freq, CPUFREQ_RELATION_C,
+					   new_freq, CPUFREQ_RELATION_L,
 					   &index)) {
 		spin_unlock_irqrestore(&pcpu->target_freq_lock, flags);
 		goto rearm;
