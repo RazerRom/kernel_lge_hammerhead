@@ -49,8 +49,8 @@ static void wake_presspwr(struct work_struct * wake_presspwr_work) {
 	msleep(PWRKEY_DUR);
 	input_event(wake_pwrdev, EV_KEY, KEY_POWER, 0);
 	input_event(wake_pwrdev, EV_SYN, 0, 0);
-	
-	msleep(PWRKEY_DUR * 6);
+
+	msleep(PWRKEY_DUR * 16);
 	wakefunc_triggered = true;
 	pwrkey_pressed = true;
 	
