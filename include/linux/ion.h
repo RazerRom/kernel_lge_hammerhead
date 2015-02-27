@@ -340,7 +340,7 @@ static inline int ion_handle_get_flags(struct ion_client *client,
 struct ion_allocation_data {
 	size_t len;
 	size_t align;
-	unsigned int heap_mask;
+	unsigned int heap_id_mask;
 	unsigned int flags;
 	struct ion_handle *handle;
 };
