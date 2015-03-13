@@ -24,8 +24,13 @@ endif
 AFLAGS_head.o += -DTEXT_OFFSET=$(TEXT_OFFSET)
 AFLAGS_head.o += -Wa,-mcpu=cortex-a15
 HEAD	= head.o
-
 OBJS	+= misc.o decompress.o
+AFLAGS_misc.o += -Wa,-mcpu=cortex-a15
+MISC = misc.o
+
+AFLAGS_decompress.o += -Wa,-mcpu=cortex-a15
+DECOMPRESS = decompress.o
+
 ifeq ($(CONFIG_KERNEL_LZ4),y)
 CFLAGS_decompress.o := -Os
 endif
