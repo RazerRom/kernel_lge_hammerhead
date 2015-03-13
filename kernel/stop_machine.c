@@ -293,32 +293,75 @@ repeat:
 	} else
 		schedule();
 
+	goto repeat;
+}
+
+extern void sched_set_stop_task(int cpu, struct task_struct *stop);
 
 /* manage stopper for a cpu, mostly lifted from sched migration thread mgmt */
 static int cpu_stop_cpu_callback(struct notifier_block *nfb,
 					   unsigned long action, void *hcpu)
-
 {
+	unsigned int cpu = (unsigned long)hcpu;
 	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
+	struct task_struct *p;
 
-	struct cpu_stop_work *work;
-	unsigned long flags;
+	switch (action & ~CPU_TASKS_FROZEN) {
+	case CPU_UP_PREPARE:
+		BUG_ON(stopper->thread || stopper->enabled ||
+		       !list_empty(&stopper->works));
+		p = kthread_create_on_node(cpu_stopper_thread,
+					   stopper,
+					   cpu_to_node(cpu),
+					   "migration/%d", cpu);
+		if (IS_ERR(p))
+			return notifier_from_errno(PTR_ERR(p));
+		get_task_struct(p);
+		kthread_bind(p, cpu);
+		sched_set_stop_task(cpu, p);
+		stopper->thread = p;
+		break;
 
-	/* drain remaining works */
-	spin_lock_irqsave(&stopper->lock, flags);
-	list_for_each_entry(work, &stopper->works, list)
-		cpu_stop_signal_done(work->done, false);
-	stopper->enabled = false;
-	spin_unlock_irqrestore(&stopper->lock, flags);
+	case CPU_ONLINE:
+		/* strictly unnecessary, as first user will wake it */
+		wake_up_process(stopper->thread);
+		/* mark enabled */
+		spin_lock_irq(&stopper->lock);
+		stopper->enabled = true;
+		spin_unlock_irq(&stopper->lock);
+		break;
+
+#ifdef CONFIG_HOTPLUG_CPU
+	case CPU_UP_CANCELED:
+	case CPU_POST_DEAD:
+	{
+		struct cpu_stop_work *work;
+
+		sched_set_stop_task(cpu, NULL);
+		/* kill the stopper */
+		kthread_stop(stopper->thread);
+		/* drain remaining works */
+		spin_lock_irq(&stopper->lock);
+		list_for_each_entry(work, &stopper->works, list)
+			cpu_stop_signal_done(work->done, false);
+		stopper->enabled = false;
+		spin_unlock_irq(&stopper->lock);
+		/* release the stopper */
+		put_task_struct(stopper->thread);
+		stopper->thread = NULL;
+		break;
+	}
+#endif
+	}
+
+	return NOTIFY_OK;
 }
-
 
 /*
  * Give it a higher priority so that cpu stopper is available to other
  * cpu notifiers.  It currently shares the same priority as sched
  * migration_notifier.
  */
-
 static struct notifier_block cpu_stop_cpu_notifier = {
 	.notifier_call	= cpu_stop_cpu_callback,
 	.priority	= 10,
