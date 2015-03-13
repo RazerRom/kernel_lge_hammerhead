@@ -947,7 +947,7 @@ EXPORT_SYMBOL_GPL(rcu_barrier);
 /*
  * Initialize preemptible RCU's per-CPU data.
  */
-static void __cpuinit rcu_preempt_init_percpu_data(int cpu)
+static void rcu_preempt_init_percpu_data(int cpu)
 {
 	rcu_init_percpu_data(cpu, &rcu_preempt_state, 1);
 }
@@ -1190,7 +1190,7 @@ EXPORT_SYMBOL_GPL(rcu_barrier);
  * Because preemptible RCU does not exist, there is no per-CPU
  * data to initialize.
  */
-static void __cpuinit rcu_preempt_init_percpu_data(int cpu)
+static void rcu_preempt_init_percpu_data(int cpu)
 {
 }
 
@@ -1447,7 +1447,8 @@ static void rcu_preempt_boost_start_gp(struct rcu_node *rnp)
  * already exist.  We only create this kthread for preemptible RCU.
  * Returns zero if all is well, a negated errno otherwise.
  */
-static int __cpuinit rcu_spawn_one_boost_kthread(struct rcu_state *rsp,
+
+static int rcu_spawn_one_boost_kthread(struct rcu_state *rsp,
 						 struct rcu_node *rnp,
 						 int rnp_index)
 {
@@ -1641,6 +1642,7 @@ static int rcu_cpu_kthread(void *arg)
 		if (work)
 			rcu_kthread_do_work();
 		local_bh_enable();
+
 		if (*workp != 0)
 			spincnt++;
 		else
@@ -1651,6 +1653,94 @@ static int rcu_cpu_kthread(void *arg)
 			rcu_yield(rcu_cpu_kthread_timer, (unsigned long)cpu);
 			trace_rcu_utilization("Start CPU kthread@rcu_yield");
 			spincnt = 0;
+		}
+	}
+	*statusp = RCU_KTHREAD_STOPPED;
+	trace_rcu_utilization("End CPU kthread@term");
+	return 0;
+}
+
+/*
+ * Spawn a per-CPU kthread, setting up affinity and priority.
+ * Because the CPU hotplug lock is held, no other CPU will be attempting
+ * to manipulate rcu_cpu_kthread_task.  There might be another CPU
+ * attempting to access it during boot, but the locking in kthread_bind()
+ * will enforce sufficient ordering.
+ *
+ * Please note that we cannot simply refuse to wake up the per-CPU
+ * kthread because kthreads are created in TASK_UNINTERRUPTIBLE state,
+ * which can result in softlockup complaints if the task ends up being
+ * idle for more than a couple of minutes.
+ *
+ * However, please note also that we cannot bind the per-CPU kthread to its
+ * CPU until that CPU is fully online.  We also cannot wait until the
+ * CPU is fully online before we create its per-CPU kthread, as this would
+ * deadlock the system when CPU notifiers tried waiting for grace
+ * periods.  So we bind the per-CPU kthread to its CPU only if the CPU
+ * is online.  If its CPU is not yet fully online, then the code in
+ * rcu_cpu_kthread() will wait until it is fully online, and then do
+ * the binding.
+ */
+static int rcu_spawn_one_cpu_kthread(int cpu)
+{
+	struct sched_param sp;
+	struct task_struct *t;
+
+	if (!rcu_scheduler_fully_active ||
+	    per_cpu(rcu_cpu_kthread_task, cpu) != NULL)
+		return 0;
+	t = kthread_create_on_node(rcu_cpu_kthread,
+				   (void *)(long)cpu,
+				   cpu_to_node(cpu),
+				   "rcuc/%d", cpu);
+	if (IS_ERR(t))
+		return PTR_ERR(t);
+	if (cpu_online(cpu))
+		kthread_bind(t, cpu);
+	per_cpu(rcu_cpu_kthread_cpu, cpu) = cpu;
+	WARN_ON_ONCE(per_cpu(rcu_cpu_kthread_task, cpu) != NULL);
+	sp.sched_priority = RCU_KTHREAD_PRIO;
+	sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
+	per_cpu(rcu_cpu_kthread_task, cpu) = t;
+	wake_up_process(t); /* Get to TASK_INTERRUPTIBLE quickly. */
+	return 0;
+}
+
+/*
+ * Per-rcu_node kthread, which is in charge of waking up the per-CPU
+ * kthreads when needed.  We ignore requests to wake up kthreads
+ * for offline CPUs, which is OK because force_quiescent_state()
+ * takes care of this case.
+ */
+static int rcu_node_kthread(void *arg)
+{
+	int cpu;
+	unsigned long flags;
+	unsigned long mask;
+	struct rcu_node *rnp = (struct rcu_node *)arg;
+	struct sched_param sp;
+	struct task_struct *t;
+
+	for (;;) {
+		rnp->node_kthread_status = RCU_KTHREAD_WAITING;
+		rcu_wait(atomic_read(&rnp->wakemask) != 0);
+		rnp->node_kthread_status = RCU_KTHREAD_RUNNING;
+		raw_spin_lock_irqsave(&rnp->lock, flags);
+		mask = atomic_xchg(&rnp->wakemask, 0);
+		rcu_initiate_boost(rnp, flags); /* releases rnp->lock. */
+		for (cpu = rnp->grplo; cpu <= rnp->grphi; cpu++, mask >>= 1) {
+			if ((mask & 0x1) == 0)
+				continue;
+			preempt_disable();
+			t = per_cpu(rcu_cpu_kthread_task, cpu);
+			if (!cpu_online(cpu) || t == NULL) {
+				preempt_enable();
+				continue;
+			}
+			per_cpu(rcu_cpu_has_work, cpu) = 1;
+			sp.sched_priority = RCU_KTHREAD_PRIO;
+			sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
+			preempt_enable();
 		}
 	}
 	*statusp = RCU_KTHREAD_STOPPED;
@@ -1780,6 +1870,40 @@ static void rcu_node_kthread_setaffinity(struct rcu_node *rnp, int outgoingcpu)
 	free_cpumask_var(cm);
 }
 
+
+
+/*
+ * Spawn a per-rcu_node kthread, setting priority and affinity.
+ * Called during boot before online/offline can happen, or, if
+ * during runtime, with the main CPU-hotplug locks held.  So only
+ * one of these can be executing at a time.
+ */
+static int rcu_spawn_one_node_kthread(struct rcu_state *rsp,
+						struct rcu_node *rnp)
+{
+	unsigned long flags;
+	int rnp_index = rnp - &rsp->node[0];
+	struct sched_param sp;
+	struct task_struct *t;
+
+	if (!rcu_scheduler_fully_active ||
+	    rnp->qsmaskinit == 0)
+		return 0;
+	if (rnp->node_kthread_task == NULL) {
+		t = kthread_create(rcu_node_kthread, (void *)rnp,
+				   "rcun/%d", rnp_index);
+		if (IS_ERR(t))
+			return PTR_ERR(t);
+		raw_spin_lock_irqsave(&rnp->lock, flags);
+		rnp->node_kthread_task = t;
+		raw_spin_unlock_irqrestore(&rnp->lock, flags);
+		sp.sched_priority = 99;
+		sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
+		wake_up_process(t); /* get to TASK_INTERRUPTIBLE quickly. */
+	}
+	return rcu_spawn_one_boost_kthread(rsp, rnp, rnp_index);
+}
+
 /*
  * Spawn a per-rcu_node kthread, setting priority and affinity.
  * Called during boot before online/offline can happen, or, if
@@ -1836,7 +1960,7 @@ static int __init rcu_spawn_kthreads(void)
 }
 early_initcall(rcu_spawn_kthreads);
 
-static void __cpuinit rcu_prepare_kthreads(int cpu)
+static void rcu_prepare_kthreads(int cpu)
 {
 	struct rcu_data *rdp = per_cpu_ptr(rcu_state->rda, cpu);
 	struct rcu_node *rnp = rdp->mynode;
@@ -1893,7 +2017,7 @@ static int __init rcu_scheduler_really_started(void)
 }
 early_initcall(rcu_scheduler_really_started);
 
-static void __cpuinit rcu_prepare_kthreads(int cpu)
+static void rcu_prepare_kthreads(int cpu)
 {
 }
 
