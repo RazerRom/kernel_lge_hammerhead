@@ -293,10 +293,24 @@ repeat:
 	} else
 		schedule();
 
-	goto repeat;
-}
 
-extern void sched_set_stop_task(int cpu, struct task_struct *stop);
+/* manage stopper for a cpu, mostly lifted from sched migration thread mgmt */
+static int cpu_stop_cpu_callback(struct notifier_block *nfb,
+					   unsigned long action, void *hcpu)
+
+{
+	struct cpu_stopper *stopper = &per_cpu(cpu_stopper, cpu);
+
+	struct cpu_stop_work *work;
+	unsigned long flags;
+
+	/* drain remaining works */
+	spin_lock_irqsave(&stopper->lock, flags);
+	list_for_each_entry(work, &stopper->works, list)
+		cpu_stop_signal_done(work->done, false);
+	stopper->enabled = false;
+	spin_unlock_irqrestore(&stopper->lock, flags);
+}
 
 /* manage stopper for a cpu, mostly lifted from sched migration thread mgmt */
 static int __cpuinit cpu_stop_cpu_callback(struct notifier_block *nfb,
