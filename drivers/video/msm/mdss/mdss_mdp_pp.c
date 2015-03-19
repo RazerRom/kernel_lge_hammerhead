@@ -326,8 +326,7 @@ static void pp_ad_cfg_write(struct mdss_ad_info *ad);
 static void pp_ad_init_write(struct mdss_ad_info *ad);
 static void pp_ad_input_write(struct mdss_ad_info *ad, u32 bl_lvl);
 static int mdss_mdp_ad_setup(struct msm_fb_data_type *mfd);
-static void pp_ad_cfg_lut(char __iomem *offset, u32 *data);
-
+static void pp_ad_cfg_lut(char __iomem *addr, u32 *data);
 static u32 last_sts, last_state;
 
 int mdss_mdp_csc_setup_data(u32 block, u32 blk_idx, u32 tbl_idx,
