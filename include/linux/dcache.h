@@ -25,6 +25,16 @@ struct vfsmount;
 
 #define IS_ROOT(x) ((x) == (x)->d_parent)
 
+#define IS_ROOT(x) ((x) == (x)->d_parent)
+
+/* The hash is always the low bits of hash_len */
+#ifdef __LITTLE_ENDIAN
+ #define HASH_LEN_DECLARE u32 hash; u32 len;
+#else
+ #define HASH_LEN_DECLARE u32 len; u32 hash;
+#endif
+
+
 /*
  * "quick string" -- eases parameter passing, but more importantly
  * saves "metadata" about the string (ie length and the hash).
@@ -32,11 +42,22 @@ struct vfsmount;
  * hash comes first so it snuggles against d_parent in the
  * dentry.
  */
+
+
 struct qstr {
-	unsigned int hash;
-	unsigned int len;
+	union {
+		struct {
+			HASH_LEN_DECLARE;
+		};
+		u64 hash_len;
+	};
 	const unsigned char *name;
 };
+#define QSTR_INIT(n,l) { { { .len = l } }, .name = n }
+#define hashlen_hash(hashlen) ((u32) (hashlen))
+#define hashlen_len(hashlen)  ((u32)((hashlen) >> 32))
+#define hashlen_create(hash,len) (((u64)(len)<<32)|(u32)(hash))
+
 
 struct dentry_stat_t {
 	int nr_dentry;

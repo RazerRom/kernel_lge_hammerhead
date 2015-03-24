@@ -255,14 +255,12 @@ static void f2fs_map_bh(struct super_block *sb, pgoff_t pgofs,
 			struct extent_info *ei, struct buffer_head *bh_result)
 {
 	unsigned int blkbits = sb->s_blocksize_bits;
-	size_t count;
+	size_t max_size = bh_result->b_size;
+	size_t mapped_size;
 
 	map_bh(bh_result, sb, ei->blk + pgofs - ei->fofs);
-	count = ei->fofs + ei->len - pgofs;
-	if (count < (UINT_MAX >> blkbits))
-		bh_result->b_size = (count << blkbits);
-	else
-		bh_result->b_size = UINT_MAX;
+	mapped_size = (ei->fofs + ei->len - pgofs) << blkbits;
+	bh_result->b_size = min(max_size, mapped_size);
 }
 
 static bool lookup_extent_info(struct inode *inode, pgoff_t pgofs,
@@ -1406,6 +1404,8 @@ int do_write_data_page(struct page *page, struct f2fs_io_info *fio)
 		f2fs_update_extent_cache(&dn);
 		trace_f2fs_do_write_data_page(page, OPU);
 		set_inode_flag(F2FS_I(inode), FI_APPEND_WRITE);
+		if (page->index == 0)
+			set_inode_flag(F2FS_I(inode), FI_FIRST_BLOCK_WRITTEN);
 	}
 out_writepage:
 	f2fs_put_dnode(&dn);
