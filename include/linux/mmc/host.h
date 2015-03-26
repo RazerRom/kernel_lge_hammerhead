@@ -414,7 +414,6 @@ struct mmc_host {
 		struct delayed_work work;
 		enum mmc_load	state;
 	} clk_scaling;
-	bool			wakeup_on_idle;
 	unsigned long		private[0] ____cacheline_aligned;
 };
 
