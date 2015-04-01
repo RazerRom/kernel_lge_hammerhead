@@ -4142,7 +4142,6 @@ static
 unsigned int taiko_read(struct snd_soc_codec *codec,
 				unsigned int reg)
 {
-	unsigned int val;
 	int ret;
 	int val;
 
