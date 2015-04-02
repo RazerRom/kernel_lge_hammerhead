@@ -87,3 +87,4 @@ GTAGS
 boot.img
 build.sh
 zip/
+ramdisk/zImage-dtb
