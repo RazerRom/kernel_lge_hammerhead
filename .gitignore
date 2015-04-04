@@ -33,6 +33,7 @@ modules.builtin
 *.lzo
 *.patch
 *.gcno
+build.sh
 
 #
 # Top-level generic files
@@ -45,6 +46,7 @@ modules.builtin
 /System.map
 /Module.markers
 /Module.symvers
+/zip
 
 #
 # Debian directory (make deb-pkg)
