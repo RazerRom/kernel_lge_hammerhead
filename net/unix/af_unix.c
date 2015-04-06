@@ -1142,14 +1142,12 @@ restart:
 	}
 
 	/* Latch our state.
-
 	   It is tricky place. We need to grab our state lock and cannot
 	   drop lock on peer. It is dangerous because deadlock is
 	   possible. Connect to self case and simultaneous
 	   attempt to connect are eliminated by checking socket
 	   state. other is TCP_LISTEN, if sk is TCP_LISTEN we
 	   check this before attempt to grab lock.
-
 	   Well, and we have to recheck the state after socket locked.
 	 */
 	st = sk->sk_state;
@@ -1447,7 +1445,7 @@ static int unix_dgram_sendmsg(struct kiocb *kiocb, struct socket *sock,
 	struct sock *other = NULL;
 	int namelen = 0; /* fake GCC */
 	int err = 0;
-	unsigned hash = 0;
+	unsigned hash  = 0;
 	struct sk_buff *skb;
 	long timeo = 0;
 	struct scm_cookie tmp_scm;
@@ -1838,11 +1836,9 @@ static int unix_dgram_recvmsg(struct kiocb *iocb, struct socket *sock,
 		     apparently wrong)
 		   - clone fds (I chose it for now, it is the most universal
 		     solution)
-
 		   POSIX 1003.1g does not actually define this clearly
 		   at all. POSIX 1003.1g doesn't define a lot of things
 		   clearly however!
-
 		*/
 
 		sk_peek_offset_fwd(sk, size);
