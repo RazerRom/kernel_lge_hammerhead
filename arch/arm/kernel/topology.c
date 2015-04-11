@@ -67,8 +67,8 @@ static DEFINE_PER_CPU(unsigned int, cpu_scale);
  * cpu topology mask update management
  */
 
-static unsigned int prev_sched_mc_power_savings = 0;
-static unsigned int prev_sched_smt_power_savings = 0;
+static unsigned int prev_sched_mc_power_savings = 2;
+static unsigned int prev_sched_smt_power_savings = 2;
 
 ATOMIC_NOTIFIER_HEAD(topology_update_notifier_list);
 
