@@ -2,10 +2,15 @@
 
 CFG="/sdcard/chroma.cfg"
 
-if [ ! -f $CFG ]; then
-	cp /system/addon.d/00-chroma_kernel.cfg $CFG;
+touch /sdcard/chroma.log
+echo $(date) >> /sdcard/chroma.log
+
+if [ ! -f /sdcard/chroma.cfg ]; then
+	echo "cfg not present > creating chroma.cfg" >> /sdcard/chroma.log;
+	cp /system/addon.d/00-chroma_kernel.cfg /sdcard/chroma.cfg;
 	chmod 755 $CFG;
 fi
+echo "loaded values!" >> /sdcard/chroma.log;
 
 ###
 #
@@ -109,3 +114,7 @@ echo $iosched > /sys/block/mmcblk0/queue/scheduler;
 # Set Readahead
 readahead="`grep "readahead_cfg" $CFG | cut -d '=' -f2`"
 echo $readahead > /sys/block/mmcblk0/queue/read_ahead_kb;
+
+
+echo $s2w >> /sdcard/chroma.log;
+echo "Success !\n\n" >> /sdcard/chroma.log
