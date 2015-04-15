@@ -10,7 +10,6 @@ import /init.${ro.hardware}.rc
 import /init.${ro.zygote}.rc
 import /init.trace.rc
 import /init.cm.rc
-import /init.chroma.rc
 
 on early-init
     # Set init and its forked children's oom_adj.
