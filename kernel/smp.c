@@ -16,6 +16,16 @@
 #include "smpboot.h"
 
 
+#ifdef CONFIG_USE_GENERIC_SMP_HELPERS
+static struct {
+	struct list_head	queue;
+	raw_spinlock_t		lock;
+} call_function __cacheline_aligned_in_smp =
+	{
+		.queue		= LIST_HEAD_INIT(call_function.queue),
+		.lock		= __RAW_SPIN_LOCK_UNLOCKED(call_function.lock),
+	};
+
 enum {
 	CSD_FLAG_LOCK		= 0x01,
 };
@@ -479,7 +489,6 @@ int smp_call_function(smp_call_func_t func, void *info, int wait)
 }
 EXPORT_SYMBOL(smp_call_function);
 
-#ifndef CONFIG_USE_GENERIC_SMP_HELPERS
 void ipi_call_lock(void)
 {
 	raw_spin_lock(&call_function.lock);
@@ -499,7 +508,7 @@ void ipi_call_unlock_irq(void)
 {
 	raw_spin_unlock_irq(&call_function.lock);
 }
-#endif
+#endif /* USE_GENERIC_SMP_HELPERS */
 
 /* Setup configured maximum number of CPUs to activate */
 unsigned int setup_max_cpus = NR_CPUS;
@@ -596,6 +605,8 @@ static inline void free_boot_cpu_mask(void)
 void __init smp_init(void)
 {
 	unsigned int cpu;
+
+	idle_threads_init();
 
 	/* FIXME: This should be done in userspace --RR */
 	for_each_present_cpu(cpu) {
