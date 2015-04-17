@@ -3045,6 +3045,7 @@ config MSM_SLEEPER
 	help
 	  CPU hotplug driver 
 
+
 config MSM_UARTDM_Core_v14
 	bool "Use MSM BLSP based HSUART Core v1.4"
 	depends on SERIAL_MSM_HS
