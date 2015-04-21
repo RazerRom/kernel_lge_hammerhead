@@ -1,9 +1,9 @@
 #!/system/bin/sh
 
-CFG="/sdcard/chroma.cfg"
+CFG="/sdcard/gamer.cfg"
 
 if [ ! -f $CFG ]; then
-	cp /system/addon.d/00-chroma_kernel.cfg $CFG;
+	cp /system/addon.d/00-gamer_kernel.cfg $CFG;
 	chmod 755 $CFG;
 fi
 
