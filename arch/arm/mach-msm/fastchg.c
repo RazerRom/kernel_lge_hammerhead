@@ -28,12 +28,11 @@
 #include <linux/sysfs.h>
 #include <linux/fastchg.h>
 
-#define FAST_CHARGE_VERSION	"version 2.1"
+#define FAST_CHARGE_VERSION	"version 2.0"
 
-
-int force_fast_charge = FAST_CHARGE_DISABLED;
-int fast_charge_level = FAST_CHARGE_1500;
-int fake_charge_ac = FAKE_CHARGE_AC_DISABLE;
+int force_fast_charge;
+int fast_charge_level;
+int fake_charge_ac;
 
 /* sysfs interface for "force_fast_charge" */
 static ssize_t force_fast_charge_show(struct kobject *kobj,
@@ -82,6 +81,7 @@ static ssize_t charge_level_store(struct kobject *kobj,
 		case FAST_CHARGE_900:
 		case FAST_CHARGE_1200:
 		case FAST_CHARGE_1500:
+		case FAST_CHARGE_1800:
 		case FAST_CHARGE_2000:
 			fast_charge_level = new_charge_level;
 			return count;
@@ -179,9 +179,6 @@ int force_fast_charge_init(void)
 
 	 /* Fake Charge AC disabled by default */
 	fake_charge_ac = FAKE_CHARGE_AC_DISABLE;
-
-	 /* Initialize fast charge level */
-	fast_charge_level = FAST_CHARGE_1500;
 
 	force_fast_charge_kobj
 		= kobject_create_and_add("fast_charge", kernel_kobj);
