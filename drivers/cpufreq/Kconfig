@@ -176,6 +176,16 @@ config CPU_FREQ_DEFAULT_GOV_UBERDEMAND
 		  driver. Fallback governor will be the performance governor.
 		  uberdemand has built in a second phase profile.
 
+config CPU_FREQ_DEFAULT_GOV_ADAPTIVE
+		bool "adaptive"
+		select CPU_FREQ_GOV_ADAPTIVE
+		---help---
+		  Use the CPUFreq governor 'adaptive' as default. This allows
+		  you to get a full dynamic cpu frequency capable system by simply
+		  loading your cpufreq low-level hardware driver, using the
+		  'adaptive' governor for latency-sensitive workloads and demanding
+		  performance.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
