@@ -142,6 +142,15 @@ config CPU_FREQ_DEFAULT_GOV_DARKNESS
 		bool "darkness"
 		select CPU_FREQ_GOV_DARKNESS
 
+config CPU_FREQ_DEFAULT_GOV_HYPER
+		bool "hyper"
+		select CPU_FREQ_GOV_HYPER
+		---help---
+		  Use the CPUFreq governor 'hyper' as default. This allows
+		  you to get a full dynamic cpu frequency capable system by simply
+		  loading your cpufreq low-level hardware driver, using the
+		  'hyper' governor for latency-sensitive workloads.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
