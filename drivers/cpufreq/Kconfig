@@ -138,6 +138,10 @@ config CPU_FREQ_DEFAULT_GOV_DANCEDANCE
 		select CPU_FREQ_GOV_DANCEDANCE
 		help
 
+config CPU_FREQ_DEFAULT_GOV_DARKNESS
+		bool "darkness"
+		select CPU_FREQ_GOV_DARKNESS
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
