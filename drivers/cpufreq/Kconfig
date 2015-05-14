@@ -163,6 +163,19 @@ config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 		help
 		  Use the CPUFreq governor 'pegasusq' as default.
 
+config CPU_FREQ_DEFAULT_GOV_UBERDEMAND
+		bool "uberdemand"
+		select CPU_FREQ_GOV_UBERDEMAND
+		select CPU_FREQ_GOV_PERFORMANCE
+		help
+		  Use the CPUFreq governor 'ondemand' as default. This allows
+		  you to get a full dynamic frequency capable system by simply
+		  loading your cpufreq low-level hardware driver.
+		  Be aware that not all cpufreq drivers support the ondemand
+		  governor. If unsure have a look at the help section of the
+		  driver. Fallback governor will be the performance governor.
+		  uberdemand has built in a second phase profile.
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
