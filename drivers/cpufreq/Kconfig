@@ -133,6 +133,11 @@ config CPU_FREQ_DEFAULT_GOV_INTELLIMM
           Use the CPUFreq governor 'intelliminmax' as default. This is
           governor will use only 3 different frequencies, idle, UI and max
 
+config CPU_FREQ_DEFAULT_GOV_DANCEDANCE
+		bool "dancedance"
+		select CPU_FREQ_GOV_DANCEDANCE
+		help
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
