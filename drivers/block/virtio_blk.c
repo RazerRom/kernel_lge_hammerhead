@@ -27,6 +27,9 @@ struct virtio_blk
 	/* The disk structure for the kernel. */
 	struct gendisk *disk;
 
+	/* Request tracking. */
+	struct list_head reqs;
+
 	mempool_t *pool;
 
 	/* Process context for config space updates */
@@ -50,6 +53,7 @@ struct virtio_blk
 
 struct virtblk_req
 {
+	struct list_head list;
 	struct request *req;
 	struct virtio_blk_outhdr out_hdr;
 	struct virtio_scsi_inhdr in_hdr;
@@ -93,6 +97,7 @@ static void blk_done(struct virtqueue *vq)
 		}
 
 		__blk_end_request_all(vbr->req, error);
+		list_del(&vbr->list);
 		mempool_free(vbr, vblk->pool);
 	}
 	/* In case queue is stopped waiting for more buffers. */
@@ -177,6 +182,7 @@ static bool do_req(struct request_queue *q, struct virtio_blk *vblk,
 		return false;
 	}
 
+	list_add_tail(&vbr->list, &vblk->reqs);
 	return true;
 }
 
@@ -429,6 +435,7 @@ static int __devinit virtblk_probe(struct virtio_device *vdev)
 		goto out_free_index;
 	}
 
+	INIT_LIST_HEAD(&vblk->reqs);
 	vblk->vdev = vdev;
 	vblk->sg_elems = sg_elems;
 	sg_init_table(vblk->sg, vblk->sg_elems);
@@ -573,30 +580,27 @@ static void __devexit virtblk_remove(struct virtio_device *vdev)
 {
 	struct virtio_blk *vblk = vdev->priv;
 	int index = vblk->index;
-	int refc;
 
 	/* Prevent config work handler from accessing the device. */
 	mutex_lock(&vblk->config_lock);
 	vblk->config_enable = false;
 	mutex_unlock(&vblk->config_lock);
 
-	del_gendisk(vblk->disk);
-	blk_cleanup_queue(vblk->disk->queue);
+	/* Nothing should be pending. */
+	BUG_ON(!list_empty(&vblk->reqs));
 
 	/* Stop all the virtqueues. */
 	vdev->config->reset(vdev);
 
 	flush_work(&vblk->config_work);
 
-	refc = atomic_read(&disk_to_dev(vblk->disk)->kobj.kref.refcount);
+	del_gendisk(vblk->disk);
+	blk_cleanup_queue(vblk->disk->queue);
 	put_disk(vblk->disk);
 	mempool_destroy(vblk->pool);
 	vdev->config->del_vqs(vdev);
 	kfree(vblk);
-
-	/* Only free device id if we don't have any users */
-	if (refc == 1)
-		ida_simple_remove(&vd_index_ida, index);
+	ida_simple_remove(&vd_index_ida, index);
 }
 
 #ifdef CONFIG_PM

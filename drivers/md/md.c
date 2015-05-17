@@ -7071,10 +7071,8 @@ void md_do_sync(struct mddev *mddev)
 	/* just incase thread restarts... */
 	if (test_bit(MD_RECOVERY_DONE, &mddev->recovery))
 		return;
-	if (mddev->ro) {/* never try to sync a read-only array */
-		set_bit(MD_RECOVERY_INTR, &mddev->recovery);
+	if (mddev->ro) /* never try to sync a read-only array */
 		return;
-	}
 
 	if (test_bit(MD_RECOVERY_SYNC, &mddev->recovery)) {
 		if (test_bit(MD_RECOVERY_CHECK, &mddev->recovery))
