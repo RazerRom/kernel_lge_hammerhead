@@ -2520,6 +2520,7 @@ static bool sleeping_prematurely(pg_data_t *pgdat, int order, long remaining,
 static unsigned long balance_pgdat(pg_data_t *pgdat, int order,
 							int *classzone_idx)
 {
+	int all_zones_ok;
 	struct zone *unbalanced_zone;
 	unsigned long balanced;
 	int priority;
@@ -2555,6 +2556,7 @@ loop_again:
 		int has_under_min_watermark_zone = 0;
 
 		unbalanced_zone = NULL;
+		all_zones_ok = 1;
 		balanced = 0;
 
 		/*
@@ -2715,7 +2717,7 @@ loop_again:
 			}
 
 		}
-		if (!unbalanced_zone || (order && pgdat_balanced(pgdat, balanced, *classzone_idx)))
+		if (all_zones_ok || (order && pgdat_balanced(pgdat, balanced, *classzone_idx)))
 			break;		/* kswapd: all done */
 		/*
 		 * OK, kswapd is getting into trouble.  Take a nap, then take
