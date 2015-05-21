@@ -181,8 +181,7 @@ static unsigned int report_load_at_max_freq(void)
 		mutex_unlock(&pcpu->cpu_load_mutex);
 	}
 
-	if (max_window_size == 0)
-		return 0;
+ 	if (max_window_size == 0) 		return 0;
 	else
 		return div_u64(timed_load, max_window_size);
 }
@@ -310,6 +309,7 @@ static ssize_t run_queue_avg_show(struct kobject *kobj,
 #ifdef CONFIG_MSM_RUN_QUEUE_STATS_BE_CONSERVATIVE
 	int nr_running = (avg_nr_running() * 10) >> FSHIFT;
 	return snprintf(buf, PAGE_SIZE, "%d.%d\n", nr_running/10, nr_running%10);
+
 #else
 	unsigned int val = 0;
 	unsigned long flags = 0;
