@@ -1,5 +1,5 @@
 /*
- *  drivers/cpufreq/cpufreq_gamer.c
+ *  drivers/cpufreq/cpufreq_razer.c
  *
  *  Copyright (C)  2001 Russell King
  *            (C)  2003 Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>.
@@ -59,8 +59,8 @@ static int g_count = 0;
 #define FREQ_FOR_RESPONSIVENESS			(300000)
 
 static unsigned int min_sampling_rate;
-static unsigned int skip_gamer = 0;
-static u64 gamer_freq_boosted_time;
+static unsigned int skip_razer = 0;
+static u64 razer_freq_boosted_time;
 
 #define DEFAULT_SAMPLING_RATE			(40000)
 #define BOOSTED_SAMPLING_RATE			(20000)
@@ -70,18 +70,18 @@ static u64 gamer_freq_boosted_time;
 
 /* have the timer rate booted for this much time 4s*/
 #define TIMER_RATE_BOOST_TIME 4000000
-static int gamer_sampling_rate_boosted;
-static u64 gamer_sampling_rate_boosted_time;
-unsigned int gamer_current_sampling_rate;
+static int razer_sampling_rate_boosted;
+static u64 razer_sampling_rate_boosted_time;
+unsigned int razer_current_sampling_rate;
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 unsigned int event);
 
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_GAMER
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_RAZER
 static
 #endif
-struct cpufreq_governor cpufreq_gov_gamer = {
-       .name                   = "gamer",
+struct cpufreq_governor cpufreq_gov_razer = {
+       .name                   = "razer",
        .governor               = cpufreq_governor_dbs,
        .max_transition_latency = TRANSITION_LATENCY_LIMIT,
        .owner                  = THIS_MODULE,
@@ -626,11 +626,11 @@ static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
 		dbs_tuners_ins.freq_boost_time = DEFAULT_FREQ_BOOST_TIME;
 
 	dbs_tuners_ins.boosted = 1;
-	gamer_freq_boosted_time = ktime_to_us(ktime_get());
+	razer_freq_boosted_time = ktime_to_us(ktime_get());
 
-	if (gamer_sampling_rate_boosted) {
-		gamer_sampling_rate_boosted = 0;
-		dbs_tuners_ins.sampling_rate = gamer_current_sampling_rate;
+	if (razer_sampling_rate_boosted) {
+		razer_sampling_rate_boosted = 0;
+		dbs_tuners_ins.sampling_rate = razer_current_sampling_rate;
 	}
 	return count;
 }
@@ -730,7 +730,7 @@ static struct attribute *dbs_attributes[] = {
 
 static struct attribute_group dbs_attr_group = {
 	.attrs = dbs_attributes,
-	.name = "gamer",
+	.name = "razer",
 };
 
 
@@ -998,19 +998,19 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
     
                 /* Only core0 controls the boost */
 	if (dbs_tuners_ins.boosted && policy->cpu == 0) {
-		if (ktime_to_us(ktime_get()) - gamer_freq_boosted_time >=
+		if (ktime_to_us(ktime_get()) - razer_freq_boosted_time >=
 					dbs_tuners_ins.freq_boost_time) {
 			dbs_tuners_ins.boosted = 0;
 		}
 	}
 
 	/* Only core0 controls the timer_rate */
-	if (gamer_sampling_rate_boosted && policy->cpu == 0) {
-		if (ktime_to_us(ktime_get()) - gamer_sampling_rate_boosted_time >=
+	if (razer_sampling_rate_boosted && policy->cpu == 0) {
+		if (ktime_to_us(ktime_get()) - razer_sampling_rate_boosted_time >=
 					TIMER_RATE_BOOST_TIME) {
 
-			dbs_tuners_ins.sampling_rate = gamer_current_sampling_rate;
-			gamer_sampling_rate_boosted = 0;
+			dbs_tuners_ins.sampling_rate = razer_current_sampling_rate;
+			razer_sampling_rate_boosted = 0;
 		}
 	}
 
@@ -1207,7 +1207,7 @@ static void do_dbs_timer(struct work_struct *work)
 
 	mutex_lock(&dbs_info->timer_mutex);
 
-	if (skip_gamer)
+	if (skip_razer)
 		goto sched_wait;
 	
 	dbs_info->sample_type = DBS_NORMAL_SAMPLE;
@@ -1361,7 +1361,7 @@ static struct input_handler dbs_input_handler = {
 	.event		= dbs_input_event,
 	.connect	= dbs_input_connect,
 	.disconnect	= dbs_input_disconnect,
-	.name		= "cpufreq_gamer",
+	.name		= "cpufreq_razer",
 	.id_table	= dbs_ids,
 };
 
@@ -1554,14 +1554,14 @@ static int __init cpufreq_gov_dbs_init(void)
 			per_cpu(up_task, i) = pthread;
 		}
 	}
-	return cpufreq_register_governor(&cpufreq_gov_gamer);
+	return cpufreq_register_governor(&cpufreq_gov_razer);
 }
 
 static void __exit cpufreq_gov_dbs_exit(void)
 {
 	unsigned int i;
 
-	cpufreq_unregister_governor(&cpufreq_gov_gamer);
+	cpufreq_unregister_governor(&cpufreq_gov_razer);
 	for_each_possible_cpu(i) {
 		struct cpu_dbs_info_s *this_dbs_info =
 			&per_cpu(od_cpu_dbs_info, i);
@@ -1577,10 +1577,10 @@ MODULE_AUTHOR("Venkatesh Pallipadi <venkatesh.pallipadi@intel.com>");
 MODULE_AUTHOR("Alexey Starikovskiy <alexey.y.starikovskiy@intel.com>");
 MODULE_AUTHOR("Electrex <ymostafa30@gmail.com>");
 MODULE_AUTHOR("gamerman123x <19superguy98@gmail.com>");
-MODULE_DESCRIPTION("'cpufreq_gamer' - multiphase dynamic-hybrid cpufreq governor");
+MODULE_DESCRIPTION("'cpufreq_razer' - multiphase dynamic-hybrid cpufreq governor");
 MODULE_LICENSE("GPL");
 
-#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_GAMER
+#ifdef CONFIG_CPU_FREQ_DEFAULT_GOV_RAZER
 fs_initcall(cpufreq_gov_dbs_init);
 #else
 module_init(cpufreq_gov_dbs_init);
